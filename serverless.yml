@@ -10,8 +10,26 @@ provider:
   runtime: nodejs20.x
   environment:
     OPENAI_API_KEY: ${env:OPENAI_API_KEY}
+    TERMS_TABLE_NAME: ${self:service}-termsTable-${sls:stage}
   stage: ${opt:stage, 'dev'}
   region: ca-central-1
+  iam:
+    role:
+      statements:
+        - Effect: 'Allow'
+          Action:
+            - 'dynamodb:PutItem'
+            - 'dynamodb:Get*'
+            - 'dynamodb:UpdateItem'
+            - 'dynamodb:DeleteItem'
+          Resource: arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:service}-termsTable-${sls:stage}
+        - Effect: 'Allow'
+          Action:
+            - 'dynamodb:PutItem'
+            - 'dynamodb:Get*'
+            - 'dynamodb:UpdateItem'
+            - 'dynamodb:DeleteItem'
+          Resource: arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:service}-domainsTable-${sls:stage}
 
 functions:
   home:
@@ -20,12 +38,23 @@ functions:
       - http:
           path: /
           method: get
+          cors: true
   globalLearn:
     handler: handler.globalLearn
     events:
       - http:
           path: /global/learn/{term}
           method: get
+          cors:
+            origin: 'https://sumelu.com'
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+            allowCredentials: false
     timeout: 25
   globalDomains:
     handler: handler.globalDomains
@@ -33,6 +62,16 @@ functions:
       - http:
           path: /global/domains
           method: get
+          cors:
+            origin: 'https://sumelu.com'
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+            allowCredentials: false
 
 resources:
   Resources:
@@ -84,6 +123,7 @@ custom:
     stage: ${self:provider.stage}
     createRoute53Record: true
     certificateName: sumelu.com # Generated on ACM
+
 
 plugins:
   - serverless-domain-manager
