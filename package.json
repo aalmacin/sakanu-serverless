@@ -8,5 +8,11 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "openai": "^4.49.0"
+  },
+  "devDependencies": {
+    "serverless-domain-manager": "^7.3.8"
+  }
 }

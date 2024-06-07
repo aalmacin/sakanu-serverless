@@ -8,18 +8,29 @@ service: sumelu
 provider:
   name: aws
   runtime: nodejs20.x
+  environment:
+    OPENAI_API_KEY: ${env:OPENAI_API_KEY}
+  stage: ${opt:stage, 'dev'}
+  region: ca-central-1
 
 functions:
+  home:
+    handler: handler.home
+    events:
+      - http:
+          path: /
+          method: get
   globalLearn:
     handler: handler.globalLearn
     events:
-      - httpApi:
+      - http:
           path: /global/learn/{term}
-          method: post
+          method: get
+    timeout: 25
   globalDomains:
     handler: handler.globalDomains
     events:
-      - httpApi:
+      - http:
           path: /global/domains
           method: get
 
@@ -67,6 +78,15 @@ resources:
               ProjectionType: ALL
         TableName: ${self:service}-domainsTable-${sls:stage}
 
+custom:
+  customDomain:
+    domainName: ${self:provider.stage}-api.sumelu.com
+    stage: ${self:provider.stage}
+    createRoute53Record: true
+    certificateName: sumelu.com # Generated on ACM
+
+plugins:
+  - serverless-domain-manager
 # POST    /global/learn/${term}
 # GET     /global/domains
 
