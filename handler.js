@@ -1,7 +1,7 @@
 'use strict'
 const AWS = require('aws-sdk');
 const OpenAI = require("openai");
-const instructions = require('./instructions.json');
+const taskGenerator = require('./taskGenerator.js');
 
 const openai = new OpenAI(process.env.OPENAI_API_KEY);
 
@@ -14,7 +14,7 @@ exports.home = async (event) => {
             message: "Welcome to the Sumelu API",
         }),
         headers: {
-            "Access-Control-Allow-Origin" : "https://sumelu.com",
+            "Access-Control-Allow-Origin": "https://sumelu.com",
         },
     };
 }
@@ -27,17 +27,20 @@ exports.globalLearn = async (event) => {
                 message: "Please provide a term",
             }),
             headers: {
-                "Access-Control-Allow-Origin" : "https://sumelu.com",
+                "Access-Control-Allow-Origin": "https://sumelu.com",
             },
         };
     }
 
+
     const term = event.pathParameters.term;
+    const domain = (event.queryStringParameters && event.queryStringParameters.domain) ? event.queryStringParameters.domain : `most appropriate domain or topic for ${term}`;
+    const dbTerm = term.trim().toLowerCase();
 
     const params = {
         TableName: process.env.TERMS_TABLE_NAME,
         Key: {
-            term: term
+            term: dbTerm
         }
     };
 
@@ -47,10 +50,13 @@ exports.globalLearn = async (event) => {
         return {
             statusCode: 200,
             body: data.Item.info,
+            headers: {
+                "Access-Control-Allow-Origin": "https://sumelu.com",
+            },
         };
     } else {
         const completion = await openai.chat.completions.create({
-            messages: [{role: "system", content: instructions.instructions}, {role: "user", content: term}],
+            messages: [{role: "system", content: taskGenerator.generate(domain)}, {role: "user", content: term}],
             model: "gpt-4o",
         });
 
@@ -58,7 +64,7 @@ exports.globalLearn = async (event) => {
         const putParams = {
             TableName: process.env.TERMS_TABLE_NAME,
             Item: {
-                term: term,
+                term: dbTerm,
                 info: completion.choices[0].message.content
             }
         };
@@ -68,6 +74,9 @@ exports.globalLearn = async (event) => {
         return {
             statusCode: 200,
             body: completion.choices[0].message.content,
+            headers: {
+                "Access-Control-Allow-Origin": "https://sumelu.com",
+            },
         };
     }
 };
@@ -79,7 +88,7 @@ exports.globalDomains = async (event) => {
             message: "Global Domains",
         }),
         headers: {
-            "Access-Control-Allow-Origin" : "https://sumelu.com",
+            "Access-Control-Allow-Origin": "https://sumelu.com",
         },
     };
 };
