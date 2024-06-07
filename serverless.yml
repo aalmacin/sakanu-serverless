@@ -1,0 +1,77 @@
+# "org" ensures this Service is used with the correct Serverless Framework Access Key.
+org: raidrin
+# "app" enables Serverless Framework Dashboard features and sharing them with other Services.
+app: sumelu
+# "service" is the name of this project. This will also be added to your AWS resource names.
+service: sumelu
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+
+functions:
+  globalLearn:
+    handler: handler.globalLearn
+    events:
+      - httpApi:
+          path: /global/learn/{term}
+          method: post
+  globalDomains:
+    handler: handler.globalDomains
+    events:
+      - httpApi:
+          path: /global/domains
+          method: get
+
+resources:
+  Resources:
+    TermsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: term
+            AttributeType: S
+          - AttributeName: user
+            AttributeType: S
+        BillingMode: PAY_PER_REQUEST
+        KeySchema:
+          - AttributeName: term
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: UserIndex
+            KeySchema:
+              - AttributeName: user
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+        TableName: ${self:service}-termsTable-${sls:stage}
+
+    DomainsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: domain
+            AttributeType: S
+          - AttributeName: user
+            AttributeType: S
+        BillingMode: PAY_PER_REQUEST
+        KeySchema:
+          - AttributeName: domain
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: UserIndex
+            KeySchema:
+              - AttributeName: user
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+        TableName: ${self:service}-domainsTable-${sls:stage}
+
+# POST    /global/learn/${term}
+# GET     /global/domains
+
+# POST    /learn/${term}
+# GET     /terms/domains
+# GET     /terms
+# GET     /terms/term/${id}
+# DELETE  /terms/term/${id}
