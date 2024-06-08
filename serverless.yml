@@ -23,13 +23,6 @@ provider:
             - 'dynamodb:UpdateItem'
             - 'dynamodb:DeleteItem'
           Resource: arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:service}-terms-table-${sls:stage}
-        - Effect: 'Allow'
-          Action:
-            - 'dynamodb:PutItem'
-            - 'dynamodb:Get*'
-            - 'dynamodb:UpdateItem'
-            - 'dynamodb:DeleteItem'
-          Resource: arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:service}-domains-table-${sls:stage}
 
 functions:
   home:
@@ -86,18 +79,6 @@ resources:
           - AttributeName: searchSha
             KeyType: HASH
         TableName: ${self:service}-terms-table-${sls:stage}
-
-    DomainsTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        AttributeDefinitions:
-          - AttributeName: searchSha
-            AttributeType: S
-        BillingMode: PAY_PER_REQUEST
-        KeySchema:
-          - AttributeName: searchSha
-            KeyType: HASH
-        TableName: ${self:service}-domains-table-${sls:stage}
 
 custom:
   customDomain:

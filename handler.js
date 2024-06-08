@@ -78,7 +78,7 @@ exports.globalLearn = async (event) => {
         }
 
         // Store the result from OpenAI in DynamoDB
-        const putParams = {
+        const putTermParams = {
             TableName: process.env.TERMS_TABLE_NAME,
             Item: {
                 searchSha: searchSha,
@@ -86,7 +86,7 @@ exports.globalLearn = async (event) => {
             }
         };
 
-        await dynamoDb.put(putParams).promise();
+        await dynamoDb.put(putTermParams).promise();
 
         return {
             statusCode: 200,
@@ -101,9 +101,17 @@ exports.globalLearn = async (event) => {
 exports.globalDomains = async (event) => {
     return {
         statusCode: 200,
-        body: JSON.stringify({
-            message: "Global Domains",
-        }),
+        body: JSON.stringify([
+            "General",
+            "Art",
+            "Business",
+            "Education",
+            "Entertainment",
+            "Health",
+            "Science",
+            "Sports",
+            "Technology"
+        ]),
         headers: {
             "Access-Control-Allow-Origin": "https://sumelu.com",
         },
