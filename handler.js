@@ -36,7 +36,7 @@ exports.globalLearn = async (event) => {
 
     const term = event.pathParameters.term;
     const domain = (event.queryStringParameters && event.queryStringParameters.domain) ? event.queryStringParameters.domain : "General";
-    const searchSha = shaGenerator.generateSearchSha({
+    const searchSha = shaGenerator.generateSearchTermSha({
         term,
         domain
     })
