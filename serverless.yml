@@ -10,7 +10,7 @@ provider:
   runtime: nodejs20.x
   environment:
     OPENAI_API_KEY: ${env:OPENAI_API_KEY}
-    TERMS_TABLE_NAME: ${self:service}-termsTable-${sls:stage}
+    TERMS_TABLE_NAME: ${self:service}-terms-table-${sls:stage}
   stage: ${opt:stage, 'dev'}
   region: ca-central-1
   iam:
@@ -22,14 +22,14 @@ provider:
             - 'dynamodb:Get*'
             - 'dynamodb:UpdateItem'
             - 'dynamodb:DeleteItem'
-          Resource: arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:service}-termsTable-${sls:stage}
+          Resource: arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:service}-terms-table-${sls:stage}
         - Effect: 'Allow'
           Action:
             - 'dynamodb:PutItem'
             - 'dynamodb:Get*'
             - 'dynamodb:UpdateItem'
             - 'dynamodb:DeleteItem'
-          Resource: arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:service}-domainsTable-${sls:stage}
+          Resource: arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:service}-domains-table-${sls:stage}
 
 functions:
   home:
@@ -79,43 +79,25 @@ resources:
       Type: AWS::DynamoDB::Table
       Properties:
         AttributeDefinitions:
-          - AttributeName: term
-            AttributeType: S
-          - AttributeName: user
+          - AttributeName: searchSha
             AttributeType: S
         BillingMode: PAY_PER_REQUEST
         KeySchema:
-          - AttributeName: term
+          - AttributeName: searchSha
             KeyType: HASH
-        GlobalSecondaryIndexes:
-          - IndexName: UserIndex
-            KeySchema:
-              - AttributeName: user
-                KeyType: HASH
-            Projection:
-              ProjectionType: ALL
-        TableName: ${self:service}-termsTable-${sls:stage}
+        TableName: ${self:service}-terms-table-${sls:stage}
 
     DomainsTable:
       Type: AWS::DynamoDB::Table
       Properties:
         AttributeDefinitions:
-          - AttributeName: domain
-            AttributeType: S
-          - AttributeName: user
+          - AttributeName: searchSha
             AttributeType: S
         BillingMode: PAY_PER_REQUEST
         KeySchema:
-          - AttributeName: domain
+          - AttributeName: searchSha
             KeyType: HASH
-        GlobalSecondaryIndexes:
-          - IndexName: UserIndex
-            KeySchema:
-              - AttributeName: user
-                KeyType: HASH
-            Projection:
-              ProjectionType: ALL
-        TableName: ${self:service}-domainsTable-${sls:stage}
+        TableName: ${self:service}-domains-table-${sls:stage}
 
 custom:
   customDomain:

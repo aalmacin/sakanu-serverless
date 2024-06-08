@@ -2,6 +2,7 @@
 const AWS = require('aws-sdk');
 const OpenAI = require("openai");
 const taskGenerator = require('./taskGenerator.js');
+const shaGenerator = require('./generateSearchSha.js');
 
 const openai = new OpenAI(process.env.OPENAI_API_KEY);
 
@@ -34,13 +35,16 @@ exports.globalLearn = async (event) => {
 
 
     const term = event.pathParameters.term;
-    const domain = (event.queryStringParameters && event.queryStringParameters.domain) ? event.queryStringParameters.domain : `most appropriate domain or topic for ${term}`;
-    const dbTerm = term.trim().toLowerCase();
+    const domain = (event.queryStringParameters && event.queryStringParameters.domain) ? event.queryStringParameters.domain : "General";
+    const searchSha = shaGenerator.generateSearchSha({
+        term,
+        domain
+    })
 
     const params = {
         TableName: process.env.TERMS_TABLE_NAME,
         Key: {
-            term: dbTerm
+            searchSha: searchSha
         }
     };
 
@@ -56,16 +60,29 @@ exports.globalLearn = async (event) => {
         };
     } else {
         const completion = await openai.chat.completions.create({
-            messages: [{role: "system", content: taskGenerator.generate(domain)}, {role: "user", content: term}],
+            messages: [{
+                role: "system",
+                content: taskGenerator.generate(domain !== 'General' ? domain : `most appropriate domain or topic for ${term}`)
+            }, {role: "user", content: term}],
             model: "gpt-4o",
         });
+
+        const termResponse = JSON.parse(completion.choices[0].message.content);
+
+        if (!termResponse.domain) {
+            if (termResponse.categories && termResponse.categories.length > 0) {
+                termResponse.domain = termResponse.categories[0];
+            } else {
+                termResponse.domain = "General";
+            }
+        }
 
         // Store the result from OpenAI in DynamoDB
         const putParams = {
             TableName: process.env.TERMS_TABLE_NAME,
             Item: {
-                term: dbTerm,
-                info: completion.choices[0].message.content
+                searchSha: searchSha,
+                info: JSON.stringify(termResponse)
             }
         };
 
@@ -73,7 +90,7 @@ exports.globalLearn = async (event) => {
 
         return {
             statusCode: 200,
-            body: completion.choices[0].message.content,
+            body: termResponse,
             headers: {
                 "Access-Control-Allow-Origin": "https://sumelu.com",
             },
