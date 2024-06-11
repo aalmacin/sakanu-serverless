@@ -8,37 +8,14 @@ const openai = new OpenAI(process.env.OPENAI_API_KEY);
 
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
 
-exports.home = async (event) => {
-    return {
-        statusCode: 200,
-        body: JSON.stringify({
-            message: "Welcome to the Sumelu API",
-        }),
-        headers: {
-            "Access-Control-Allow-Origin": "https://sumelu.com",
-        },
-    };
-}
+const jwt = require('jsonwebtoken');
+const jwksClient = require('jwks-rsa');
 
-exports.globalLearn = async (event) => {
-    if (!event.pathParameters || !event.pathParameters.term) {
-        return {
-            statusCode: 400,
-            body: JSON.stringify({
-                message: "Please provide a term",
-            }),
-            headers: {
-                "Access-Control-Allow-Origin": "https://sumelu.com",
-            },
-        };
-    }
-
-
-    const term = event.pathParameters.term;
-    const domain = (event.queryStringParameters && event.queryStringParameters.domain) ? event.queryStringParameters.domain : "General";
+const learn = async ({domain, term, user = "global"}) => {
     const searchSha = shaGenerator.generateSearchTermSha({
         term,
-        domain
+        domain,
+        user
     })
 
     const params = {
@@ -96,9 +73,101 @@ exports.globalLearn = async (event) => {
             },
         };
     }
+}
+
+exports.home = async () => {
+    return {
+        statusCode: 200,
+        body: JSON.stringify({
+            message: "Welcome to the Sumelu API",
+        }),
+        headers: {
+            "Access-Control-Allow-Origin": "https://sumelu.com",
+        },
+    };
+}
+
+exports.authLearn = async (event) => {
+    if (!event.pathParameters || !event.pathParameters.term) {
+        return {
+            statusCode: 400,
+            body: JSON.stringify({
+                message: "Please provide a term",
+            }),
+            headers: {
+                "Access-Control-Allow-Origin": "https://sumelu.com",
+            },
+        };
+    }
+
+    if (event.headers && event.headers.Authorization) {
+        const token = event.headers.Authorization.split(' ')[1];
+        const client = jwksClient({
+            jwksUri: `${process.env.OKTA_OAUTH2_ISSUER}.well-known/jwks.json`
+        });
+
+        const header = jwt.decode(token, {complete: true}).header;
+
+        const key = await new Promise((resolve, reject) => {
+            client.getSigningKey(header.kid, (err, key) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(key);
+                }
+            });
+        });
+
+        const signingKey = key.publicKey || key.rsaPublicKey;
+
+        const decoded = await new Promise((resolve, reject) => {
+            jwt.verify(token, signingKey, {
+                audience: process.env.OKTA_OAUTH2_AUDIENCE,
+                issuer: process.env.OKTA_OAUTH2_ISSUER,
+                algorithms: ['RS256']
+            }, (err, decoded) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(decoded);
+                }
+            });
+        });
+
+        const term = event.pathParameters.term;
+        const domain = (event.queryStringParameters && event.queryStringParameters.domain) ? event.queryStringParameters.domain : "General";
+        return learn({domain, term, user: decoded.sub});
+    }
+    return {
+        statusCode: 500,
+        body: JSON.stringify({
+            message: "Something went wrong. Please try again."
+        }),
+        headers: {
+            "Access-Control-Allow-Origin": "https://sumelu.com",
+        },
+    }
+}
+
+exports.globalLearn = async (event) => {
+    if (!event.pathParameters || !event.pathParameters.term) {
+        return {
+            statusCode: 400,
+            body: JSON.stringify({
+                message: "Please provide a term",
+            }),
+            headers: {
+                "Access-Control-Allow-Origin": "https://sumelu.com",
+            },
+        };
+    }
+
+    const term = event.pathParameters.term;
+    const domain = (event.queryStringParameters && event.queryStringParameters.domain) ? event.queryStringParameters.domain : "General";
+    return learn({domain, term});
 };
 
-exports.globalDomains = async (event) => {
+exports.globalDomains = async () => {
     return {
         statusCode: 200,
         body: JSON.stringify([

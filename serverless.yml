@@ -11,6 +11,8 @@ provider:
   environment:
     OPENAI_API_KEY: ${env:OPENAI_API_KEY}
     TERMS_TABLE_NAME: ${self:service}-terms-table-${sls:stage}
+    OKTA_OAUTH2_ISSUER: ${env:OKTA_OAUTH2_ISSUER}
+    OKTA_OAUTH2_AUDIENCE: ${env:OKTA_OAUTH2_AUDIENCE}
   stage: ${opt:stage, 'dev'}
   region: ca-central-1
   iam:
@@ -37,6 +39,23 @@ functions:
     events:
       - http:
           path: /global/learn/{term}
+          method: get
+          cors:
+            origin: 'https://sumelu.com'
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+            allowCredentials: false
+    timeout: 25
+  authLearn:
+    handler: handler.authLearn
+    events:
+      - http:
+          path: /learn/{term}
           method: get
           cors:
             origin: 'https://sumelu.com'
